@@ -18,7 +18,6 @@ struct OnboardingView: View {
 
         NavigationStack {
             VStack {
-                // Header Logo
                 secondaryWhite
                     .frame(height: 120)
                     .overlay(

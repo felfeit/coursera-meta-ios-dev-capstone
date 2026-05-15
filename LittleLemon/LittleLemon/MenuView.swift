@@ -10,51 +10,142 @@ import SwiftUI
 
 struct MenuView: View {
     @Environment(\.managedObjectContext) private var viewContext
-
-    // Step 3: State variable untuk teks pencarian
     @State var searchText = ""
+    @State var selectedCategory = ""
+
+    let categories = ["Starters", "Mains", "Desserts"]
 
     var body: some View {
-        VStack {
-            Text("Little Lemon")
-                .font(.custom("MarkaziText-Medium", size: 42))
-                .foregroundColor(primaryYellow)
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Image("Logo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 40)
+                Spacer()
+                Image("profile-image-placeholder")
+                    .resizable()
+                    .frame(width: 40, height: 40)
+                    .clipShape(Circle())
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
 
-            Text("Chicago")
-                .font(.custom("MarkaziText-Medium", size: 24))
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Little Lemon")
+                    .font(.custom("MarkaziText-Medium", size: 42))
+                    .foregroundColor(primaryYellow)
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Chicago")
+                            .font(.custom("MarkaziText-Medium", size: 26))
+                            .foregroundColor(.white)
 
-            Text("Search for your favorite dish!")
-                .font(.custom("Karla-Regular", size: 16))
+                        Text(
+                            "We are a family owned Mediterranean restaurant, focused on traditional recipes served with a modern twist."
+                        )
+                        .font(.custom("Karla-Regular", size: 16))
+                        .foregroundColor(.white)
 
-            // Step 3: TextField untuk pencarian
-            TextField("Search menu", text: $searchText)
-                .padding()
-                .textFieldStyle(.roundedBorder)
+                    }
+                    Spacer()
+                    Image("Hero image")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 130, height: 130)
+                        .cornerRadius(16)
+                }
 
-            // Step 2 & 5: Update FetchedObjects dengan Predicate dan Sort Descriptors
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.gray)
+                    TextField("Search menu", text: $searchText)
+                }
+                .padding(10)
+                .background(Color.white)
+                .cornerRadius(10)
+                .padding(.top, 10)
+            }
+            .padding()
+            .background(primaryGreen)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Order for Delivery")
+                    .font(.custom("Karla-Bold", size: 18))
+                    .padding([.horizontal, .top])
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 15) {
+                        ForEach(categories, id: \.self) { category in
+                            Button(action: {
+                                // Toggle filter logic
+                                if selectedCategory == category.lowercased() {
+                                    selectedCategory = ""
+                                } else {
+                                    selectedCategory = category.lowercased()
+                                }
+                            }) {
+                                Text(category)
+                                    .font(.custom("Karla-Bold", size: 16))
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 20)
+                                    .background(
+                                        selectedCategory
+                                            == category.lowercased()
+                                            ? primaryYellow
+                                            : Color.gray.opacity(0.15)
+                                    )
+                                    .foregroundColor(primaryGreen)
+                                    .cornerRadius(12)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                Divider().padding(.top, 10)
+            }
+
             FetchedObjects(
                 predicate: buildPredicate(),
-                sortDescriptors: buildSortDescriptors()
+                sortDescriptors: [
+                    NSSortDescriptor(
+                        key: "title",
+                        ascending: true,
+                        selector: #selector(NSString.localizedStandardCompare)
+                    )
+                ]
             ) { (dishes: [Dish]) in
                 List {
                     ForEach(dishes) { dish in
                         HStack {
-                            Text("\(dish.title ?? "") - $\(dish.price ?? "")")
-                                .font(.custom("Karla-Regular", size: 18))
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(dish.title ?? "").bold()
+                                    .font(.custom("Karla-Bold", size: 18))
 
+                                Text(dish.descriptionText ?? "")
+                                    .font(.custom("Karla-Regular", size: 14))
+                                    .foregroundColor(.gray)
+                                    .lineLimit(2)
+
+                                Text("$\(dish.price ?? "0").00")
+                                    .font(.custom("Karla-Bold", size: 16))
+                                    .foregroundColor(primaryGreen)
+                            }
                             Spacer()
-
                             AsyncImage(url: URL(string: dish.image ?? "")) {
                                 image in
                                 image.resizable()
+                                    .aspectRatio(contentMode: .fill)
                             } placeholder: {
                                 ProgressView()
                             }
-                            .frame(width: 50, height: 50)
+                            .frame(width: 85, height: 85)
                             .cornerRadius(8)
                         }
                     }
                 }
+                .listStyle(.plain)
             }
         }
         .onAppear {
@@ -62,41 +153,38 @@ struct MenuView: View {
         }
     }
 
-    // Step 1: Fungsi untuk mengurutkan berdasarkan nama (A-Z)
-    func buildSortDescriptors() -> [NSSortDescriptor] {
-        return [
-            NSSortDescriptor(
-                key: "title",
-                ascending: true,
-                selector: #selector(NSString.localizedStandardCompare)
-            )
-        ]
-    }
-
-    // Step 4: Fungsi untuk menyaring data berdasarkan teks pencarian
     func buildPredicate() -> NSPredicate {
-        if searchText.isEmpty {
-            // Jika kosong, tampilkan semua data
-            return NSPredicate(value: true)
-        } else {
-            // Filter berdasarkan judul yang mengandung teks (case-insensitive)
-            return NSPredicate(format: "title CONTAINS[cd] %@", searchText)
+        var predicates: [NSPredicate] = []
+
+        if !searchText.isEmpty {
+            predicates.append(
+                NSPredicate(format: "title CONTAINS[cd] %@", searchText)
+            )
         }
+
+        if !selectedCategory.isEmpty {
+            predicates.append(
+                NSPredicate(format: "category == %@", selectedCategory)
+            )
+        }
+
+        return predicates.isEmpty
+            ? NSPredicate(value: true)
+            : NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
     }
 
-    // Fungsi fetch data (seperti di latihan sebelumnya)
     func getMenuData() {
-        PersistenceController.shared.clear()
+        let fetchRequest: NSFetchRequest<Dish> = Dish.fetchRequest()
+        let count = (try? viewContext.count(for: fetchRequest)) ?? 0
+
+        if count > 0 { return }
 
         let urlString =
             "https://raw.githubusercontent.com/Meta-Mobile-Developer-PC/Working-With-Data-API/main/menu.json"
         let url = URL(string: urlString)!
         let request = URLRequest(url: url)
 
-        let task = URLSession.shared.dataTask(with: request) {
-            data,
-            response,
-            error in
+        URLSession.shared.dataTask(with: request) { data, _, _ in
             if let data = data {
                 let decoder = JSONDecoder()
                 if let menuList = try? decoder.decode(MenuList.self, from: data)
@@ -106,11 +194,12 @@ struct MenuView: View {
                         newDish.title = item.title
                         newDish.image = item.image
                         newDish.price = item.price
+                        newDish.descriptionText = item.description
+                        newDish.category = item.category.lowercased()
                     }
                     try? viewContext.save()
                 }
             }
-        }
-        task.resume()
+        }.resume()
     }
 }

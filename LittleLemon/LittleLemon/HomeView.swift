@@ -5,11 +5,10 @@
 //  Created by Arya Dzikra on 15/05/2026.
 //
 
-import SwiftUI
 import CoreData
+import SwiftUI
 
 struct HomeView: View {
-    // Step 4: Persistence constant
     let persistence = PersistenceController.shared
 
     var body: some View {
@@ -18,7 +17,7 @@ struct HomeView: View {
                 .environment(
                     \.managedObjectContext,
                     persistence.container.viewContext
-                )  // Pass viewContext
+                )
                 .tabItem {
                     Label("Menu", systemImage: "list.dash")
                 }
